@@ -1,0 +1,187 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  CANDIDATE
+  COMPANY_ADMIN
+}
+
+enum JobType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  INTERNSHIP
+  REMOTE
+}
+
+enum JobStatus {
+  ACTIVE
+  CLOSED
+  DRAFT
+}
+
+
+enum ApplicationStatus {
+  PENDING
+  REVIEWING
+  SHORTLISTED
+  REJECTED
+  ACCEPTED
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      Role     @default(CANDIDATE)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  company      Company?     @relation("CompanyOwner")
+  applications Application[]
+  profile      Profile?
+  savedJobs    SavedJob[]
+
+  @@map("users")
+}
+
+model Company {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  website     String?
+  location    String?
+  logo        String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  owner   User   @relation("CompanyOwner", fields: [ownerId], references: [id])
+  ownerId String @unique @map("owner_id")
+
+  jobs Job[]
+
+  @@map("companies")
+}
+
+model Job {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  location    String?
+  type        JobType  @default(FULL_TIME)
+  salaryMin   Float?   @map("salary_min")
+  salaryMax   Float?   @map("salary_max")
+  skills      String[]
+  experience  String?
+  status      JobStatus @default(ACTIVE)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  company   Company       @relation(fields: [companyId], references: [id])
+  companyId String        @map("company_id")
+  applications Application[]
+  savedBy      SavedJob[]
+
+  @@map("jobs")
+}
+
+model Application {
+  id          String            @id @default(cuid())
+  status      ApplicationStatus @default(PENDING)
+  coverLetter String?           @map("cover_letter")
+  resumeUrl   String?           @map("resume_url")
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+
+  user   User   @relation(fields: [userId], references: [id])
+  userId String @map("user_id")
+
+  job   Job    @relation(fields: [jobId], references: [id])
+  jobId String @map("job_id")
+
+  @@unique([userId, jobId])
+  @@map("applications")
+}
+
+model SavedJob {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String @map("user_id")
+
+  job   Job    @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  jobId String @map("job_id")
+
+  @@unique([userId, jobId])
+  @@map("saved_jobs")
+}
+
+model Profile {
+  id           String   @id @default(cuid())
+  phone        String?
+  location     String?
+  headline     String?
+  avatar       String?
+  skills       String[]
+  experience   String?
+  education    String?
+  resumeUrl    String?  @map("resume_url")
+  linkedinUrl  String?  @map("linkedin_url")
+  githubUrl    String?  @map("github_url")
+  portfolioUrl String?  @map("portfolio_url")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  user        User         @relation(fields: [userId], references: [id])
+  userId      String       @unique @map("user_id")
+  experiences Experience[]
+  educations  Education[]
+
+  @@map("profiles")
+}
+
+model Experience {
+  id          String   @id @default(cuid())
+  title       String
+  company     String
+  location    String?
+  startDate   DateTime   @map("start_date")
+  endDate     DateTime?  @map("end_date")
+  current     Boolean    @default(false)
+  description String?
+  sortOrder   Int        @default(0) @map("sort_order")
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+
+  profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  profileId String  @map("profile_id")
+
+  @@map("experiences")
+}
+
+model Education {
+  id          String   @id @default(cuid())
+  degree      String
+  school      String
+  field       String?
+  startDate   DateTime   @map("start_date")
+  endDate     DateTime?  @map("end_date")
+  current     Boolean    @default(false)
+  description String?
+  sortOrder   Int        @default(0) @map("sort_order")
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+
+  profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  profileId String  @map("profile_id")
+
+  @@map("educations")
+}
